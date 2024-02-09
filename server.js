@@ -1,5 +1,5 @@
 const express = require("express");
-const cors = require("cors"); // Import the cors middleware
+const cors = require("cors");
 const app = express();
 const crawlerRoutes = require("./routes/crawler");
 const { Pool } = require("pg");

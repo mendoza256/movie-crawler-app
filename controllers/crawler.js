@@ -3,12 +3,14 @@ const {
   nextSevenDays,
   returnUrlForCurrentProgramme,
   checkIfUrlHasDate,
+  cleanUpMovieTitles,
+  isRealMovieTitle,
 } = require("../lib/utils.js");
 const { listOfCinemas } = require("../lib/hardcodedData.js");
 
 async function evaluateCinemaPage(page, url, cinema, date) {
   if (!date) {
-    date = nextSevenDays[6];
+    date = nextSevenDays[0];
   }
   try {
     await page.goto(url);
@@ -81,9 +83,30 @@ exports.crawlCinemas = async (req, res, next) => {
       return a.title.localeCompare(b.title);
     });
 
+    const cleanedUpMovieTitles = sortedUniqueMovieTitles.map((movie) => {
+      console.log("cleaning up movie titles...");
+      const filteredAndFormattedMovie = cleanUpMovieTitles(movie.title);
+      return { ...movie, title: filteredAndFormattedMovie };
+    });
+
+    const filteredMovieTitles = cleanedUpMovieTitles.filter((movie) => {
+      console.log("checking if movie title is real...");
+      return isRealMovieTitle(movie.title);
+    });
+
+    // TODO remove cinema series from title
+    // const removeCinemaSeriesFromTitle = filteredMovieTitles.map((movie) => {
+    //   if (!movie.title.includes(":")) {
+    //     return movie;
+    //   }
+    //   console.log("removing cinema series from movie title...");
+    //   const titleWithoutCinemaSeries = movie.title.split(":")[1].trim();
+    //   return { ...movie, title: titleWithoutCinemaSeries };
+    // });
+
     await browser.close();
     console.log("crawling finished");
-    res.status(200).json({ movieTitles: sortedUniqueMovieTitles });
+    res.status(200).json({ movieTitles: filteredMovieTitles });
   } catch (error) {
     console.error("Error during crawling:", error);
     res.status(500).json({ error: "Internal Server Error" });
