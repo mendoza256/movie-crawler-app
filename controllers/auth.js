@@ -1,10 +1,10 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/user");
 const jwt = require("jsonwebtoken");
+require("dotenv").config();
 
 exports.login = async (req, res, next) => {
   const { email, password } = req.body;
-  console.log("email:", email, "password:", password);
 
   if (!email || !password) {
     res.status(400).json({ message: "Missing required fields" });
@@ -12,35 +12,35 @@ exports.login = async (req, res, next) => {
   }
 
   const existingUser = await User.findOne({ email });
+  if (!existingUser) {
+    res.status(404).json({ message: "User not found" });
+    return;
+  }
+
   const isPasswordCorrect = await bcrypt.compare(
     password,
     existingUser.password
   );
-
-  if (!existingUser || !isPasswordCorrect) {
-    res.status(404).json({ message: "User password combination not found" });
+  if (!isPasswordCorrect) {
+    res.status(404).json({ message: "Incorrect password" });
     return;
   }
 
-  // TODO move secret to .env
+  console.log("existingUser", existingUser.email);
+  console.log("isPasswordCorrect", isPasswordCorrect);
+
   const token = jwt.sign(
     { email: existingUser.email, userId: existingUser._id.toString() },
-    "secret",
+    process.env.JWT_SECRET,
     { expiresIn: "1h" }
   );
 
-  res
-    .cookie("token", token, {
-      httpOnly: true,
-      maxAge: 3600000,
-    })
-    .redirect("/");
+  res.cookie("token", token, {
+    httpOnly: true,
+    maxAge: 3600000,
+  });
 
-  if (existingUser && isPasswordCorrect) {
-    res.status(200).json({ message: "Login successful" });
-  } else {
-    res.status(401).json({ message: "Login failed" });
-  }
+  res.status(200).json({ token });
 };
 
 exports.register = async (req, res, next) => {
@@ -85,7 +85,7 @@ exports.getUser = async (req, res, next) => {
   }
 
   try {
-    const decodedToken = jwt.verify(token, "secret");
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decodedToken.userId);
     if (!user) {
       res.status(401).json({ message: "Not authenticated" });
