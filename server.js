@@ -4,9 +4,9 @@ const app = express();
 const session = require("express-session");
 const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
+require("dotenv").config();
 
-const mongodbUri =
-  "mongodb+srv://christian:MM8xTBxHCwp186t9@cluster0.5uqboef.mongodb.net/movie-crawler?retryWrites=true&w=majority";
+const mongodbUri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.5uqboef.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 
 mongoose
   .connect(mongodbUri)
@@ -34,7 +34,11 @@ app.use(
 
 app.use(express.json());
 app.use(
-  session({ secret: "my-secret", resave: false, saveUninitialized: false })
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+  })
 );
 
 app.use("/crawl", crawlerRoutes);
