@@ -11,36 +11,41 @@ exports.login = async (req, res, next) => {
     return;
   }
 
-  const existingUser = await User.findOne({ email });
-  if (!existingUser) {
-    res.status(404).json({ message: "User not found" });
-    return;
+  try {
+    const existingUser = await User.findOne({ email });
+
+    if (!existingUser) {
+      res.status(401).json({ message: "Invalid credentials" });
+      return;
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      existingUser.password
+    );
+
+    if (!isPasswordCorrect) {
+      res.status(401).json({ message: "Invalid credentials" });
+      return;
+    }
+
+    const tokenPayload = {
+      email: existingUser.email,
+      userId: existingUser._id.toString(),
+    };
+    const tokenOptions = { expiresIn: "1h" };
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, tokenOptions);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      maxAge: 3600000,
+    });
+
+    res.status(200).json({ token });
+  } catch (error) {
+    console.error("Error in login:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
-
-  const isPasswordCorrect = await bcrypt.compare(
-    password,
-    existingUser.password
-  );
-  if (!isPasswordCorrect) {
-    res.status(404).json({ message: "Incorrect password" });
-    return;
-  }
-
-  console.log("existingUser", existingUser.email);
-  console.log("isPasswordCorrect", isPasswordCorrect);
-
-  const token = jwt.sign(
-    { email: existingUser.email, userId: existingUser._id.toString() },
-    process.env.JWT_SECRET,
-    { expiresIn: "1h" }
-  );
-
-  res.cookie("token", token, {
-    httpOnly: true,
-    maxAge: 3600000,
-  });
-
-  res.status(200).json({ token });
 };
 
 exports.register = async (req, res, next) => {
@@ -78,23 +83,8 @@ exports.register = async (req, res, next) => {
 };
 
 exports.getUser = async (req, res, next) => {
-  const token = req.cookies.token;
-  if (!token) {
-    res.status(401).json({ message: "Not authenticated" });
-    return;
-  }
-
-  try {
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decodedToken.userId);
-    if (!user) {
-      res.status(401).json({ message: "Not authenticated" });
-      return;
-    }
-    res.status(200).json({ user });
-  } catch (error) {
-    res.status(401).json({ message: "Not authenticated" });
-  }
+  //return req.user
+  res.status(200).json({ user: req.user });
 };
 
 exports.logout = async (req, res, next) => {
