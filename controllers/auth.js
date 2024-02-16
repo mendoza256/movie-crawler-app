@@ -56,7 +56,7 @@ exports.register = async (req, res, next) => {
     return;
   }
 
-  const hashedPassword = await bcrypt.hash(password, salt);
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   const existingUser = await User.findOne({
     $or: [{ username }, { email }],
@@ -83,8 +83,18 @@ exports.register = async (req, res, next) => {
 };
 
 exports.getUser = async (req, res, next) => {
-  //return req.user
-  res.status(200).json({ user: req.user });
+  try {
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+    res.status(200).json({ user });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };
 
 exports.logout = async (req, res, next) => {
