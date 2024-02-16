@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const cors = require("cors");
-const User = require("../models/user");
 const { login, register, getUser, logout } = require("../controllers/auth");
 const { authenticateJWT } = require("../middleware/auth");
 
