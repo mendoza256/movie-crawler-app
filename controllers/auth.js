@@ -31,7 +31,8 @@ exports.login = async (req, res, next) => {
 
     const tokenPayload = {
       email: existingUser.email,
-      userId: existingUser._id.toString(),
+      id: existingUser._id.toString(),
+      role: existingUser.role,
     };
     const tokenOptions = { expiresIn: "1h" };
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, tokenOptions);
@@ -85,7 +86,7 @@ exports.register = async (req, res, next) => {
 
 exports.getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.id);
 
     if (!user) {
       res.status(404).json({ message: "User not found" });

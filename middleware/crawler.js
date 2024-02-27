@@ -1,6 +1,7 @@
-module.exports = function ensureSuperAdmin(req, res, next) {
-  const body = req.body;
-  if (body.role === "superadmin") {
+exports.ensureSuperAdmin = (req, res, next) => {
+  const user = req.user;
+  console.log("user", user);
+  if (user.role === "superadmin") {
     next();
   } else {
     res.status(403).json({
