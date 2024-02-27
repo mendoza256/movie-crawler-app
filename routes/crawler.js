@@ -1,13 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const crawlerController = require("../controllers/crawler");
-const authenticateJWT = require("../middleware/auth");
-const ensureSuperAdmin = require("../middleware/crawler");
+const auth = require("../middleware/auth");
+const crawler = require("../middleware/crawler");
 
 router.get(
   "/",
-  authenticateJWT,
-  ensureSuperAdmin,
+  auth.authenticateJWT,
+  crawler.ensureSuperAdmin,
   crawlerController.crawlCinemas
 );
 

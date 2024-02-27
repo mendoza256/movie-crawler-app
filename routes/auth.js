@@ -10,8 +10,6 @@ router.post("/login", login);
 
 router.post("/register", register);
 
-router.get("/user", getUser);
-
 router.get("/", (req, res) => {
   res.send("Auth route");
 });
