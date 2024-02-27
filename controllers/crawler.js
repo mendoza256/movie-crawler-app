@@ -7,6 +7,7 @@ const {
   isRealMovieTitle,
 } = require("../lib/utils.js");
 const { listOfCinemas } = require("../lib/hardcodedData.js");
+const Movie = require("../models/movies.js");
 
 async function evaluateCinemaPage(page, url, cinema, date) {
   if (!date) {
@@ -94,15 +95,17 @@ exports.crawlCinemas = async (req, res, next) => {
       return isRealMovieTitle(movie.title);
     });
 
-    // TODO remove cinema series from title
-    // const removeCinemaSeriesFromTitle = filteredMovieTitles.map((movie) => {
-    //   if (!movie.title.includes(":")) {
-    //     return movie;
-    //   }
-    //   console.log("removing cinema series from movie title...");
-    //   const titleWithoutCinemaSeries = movie.title.split(":")[1].trim();
-    //   return { ...movie, title: titleWithoutCinemaSeries };
-    // });
+    // save movies to database
+    filteredMovieTitles.map(async (movie) => {
+      const newMovie = new Movie({
+        title: movie.title,
+        cinema: movie.cinema,
+        date: movie.date,
+      });
+
+      const result = await newMovie.save();
+      console.log("Saved movie to database:", result);
+    });
 
     await browser.close();
     console.log("crawling finished");

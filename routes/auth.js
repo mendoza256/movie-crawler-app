@@ -16,7 +16,7 @@ router.get("/", (req, res) => {
   res.send("Auth route");
 });
 
-router.get("/logout", logout);
+router.post("/logout", logout);
 
 router.get("/getUser", authenticateJWT, getUser);
 

@@ -71,6 +71,7 @@ exports.register = async (req, res, next) => {
     username,
     email,
     password: hashedPassword,
+    role: "user",
   });
 
   const result = await user.save();
@@ -92,7 +93,6 @@ exports.getUser = async (req, res, next) => {
     }
     res.status(200).json({ user });
   } catch (error) {
-    console.log(error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
