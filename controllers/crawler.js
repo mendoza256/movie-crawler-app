@@ -3,8 +3,7 @@ const {
   nextSevenDays,
   returnUrlForCurrentProgramme,
   checkIfUrlHasDate,
-  cleanUpMovieTitles,
-  isRealMovieTitle,
+  filterAndCleanMovieTitles,
 } = require("../lib/utils.js");
 const { listOfCinemas } = require("../lib/hardcodedData.js");
 const Movie = require("../models/movies.js");
@@ -64,29 +63,7 @@ exports.crawlCinemas = async (req, res, next) => {
       }
     }
 
-    const uniqueMovieTitles = movieTitles
-      .flat()
-      .filter(
-        (movie, index, self) =>
-          index ===
-          self.findIndex(
-            (t) => t.title === movie.title && t.cinema === movie.cinema
-          )
-      );
-    const sortedUniqueMovieTitles = uniqueMovieTitles.sort((a, b) =>
-      a.title.localeCompare(b.title)
-    );
-
-    const cleanedUpMovieTitles = sortedUniqueMovieTitles.map((movie) => {
-      console.log("cleaning up movie titles...");
-      const filteredAndFormattedMovie = cleanUpMovieTitles(movie.title);
-      return { ...movie, title: filteredAndFormattedMovie };
-    });
-
-    const filteredMovieTitles = cleanedUpMovieTitles.filter((movie) => {
-      console.log("checking if movie title is real...");
-      return isRealMovieTitle(movie.title);
-    });
+    const filteredMovieTitles = filterAndCleanMovieTitles(movieTitles);
 
     for (const movie of filteredMovieTitles) {
       const newMovie = new Movie({
@@ -97,7 +74,6 @@ exports.crawlCinemas = async (req, res, next) => {
           listOfCinemas.find((c) => c.name === movie.cinema).urlString,
           movie.date
         ),
-        created_at: new Date(),
       });
 
       const result = await newMovie.save();
