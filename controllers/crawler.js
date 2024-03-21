@@ -8,15 +8,29 @@ const {
 const { listOfCinemas } = require("../lib/hardcodedData.js");
 const Movie = require("../models/movies.js");
 
-async function evaluateCinemaPage(page, url, cinema, date = nextSevenDays[0]) {
+async function evaluateMoviesFromCinemaPage(
+  page,
+  url,
+  cinema,
+  date = nextSevenDays[0]
+) {
   try {
     await page.goto(url);
-    const movieTitles = await page.$$eval(cinema.titleFieldEl, (elements) =>
-      elements.map((el) => el.innerText)
+    const movieData = await page.$$eval(cinema.titleFieldEl, (elements) =>
+      elements.map((el) => {
+        function hasColon(str) {
+          return str.includes(":");
+        }
+        return {
+          title: el.innerText,
+          series: hasColon(el.innerText) ? el.innerText.split(":")[0] : null,
+        };
+      })
     );
 
-    return movieTitles.map((title) => ({
-      title,
+    return movieData.map((movie) => ({
+      title: movie.title,
+      series: movie.series,
       cinema: cinema.name,
       date,
     }));
@@ -39,7 +53,7 @@ exports.crawlCinemas = async (req, res, next) => {
     for (const cinema of listOfCinemas) {
       console.log("crawl cinema:", cinema.name);
       const url = returnUrlForCurrentProgramme(cinema.urlString);
-      const data = await evaluateCinemaPage(page, url, cinema, null);
+      const data = await evaluateMoviesFromCinemaPage(page, url, cinema, null);
       movieTitles.push(data);
 
       if (!checkIfUrlHasDate(cinema.urlString)) {
@@ -53,12 +67,13 @@ exports.crawlCinemas = async (req, res, next) => {
           cinema.urlString,
           date
         );
-        const newMovietitles = await evaluateCinemaPage(
+        const newMovietitles = await evaluateMoviesFromCinemaPage(
           page,
           urlWithDate,
           cinema,
           date
         );
+        console.log("newMovietitles:", newMovietitles);
         movieTitles.push(newMovietitles);
       }
     }

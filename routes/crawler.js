@@ -6,8 +6,8 @@ const crawler = require("../middleware/crawler");
 
 router.get(
   "/",
-  auth.authenticateJWT,
-  crawler.ensureSuperAdmin,
+  // auth.authenticateJWT,
+  // crawler.ensureSuperAdmin,
   crawlerController.crawlCinemas
 );
 
