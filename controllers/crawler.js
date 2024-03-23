@@ -2,8 +2,7 @@ const puppeteer = require("puppeteer");
 const {
   nextSevenDays,
   returnUrlForCurrentProgramme,
-  checkIfUrlHasDate,
-  filterAndCleanMovieTitles,
+  processMoviesData,
 } = require("../lib/utils.js");
 const { listOfCinemas } = require("../lib/hardcodedData.js");
 const Movie = require("../models/movies.js");
@@ -16,24 +15,11 @@ async function evaluateMoviesFromCinemaPage(
 ) {
   try {
     await page.goto(url);
-    const movieData = await page.$$eval(cinema.titleFieldEl, (elements) =>
-      elements.map((el) => {
-        function hasColon(str) {
-          return str.includes(":");
-        }
-        return {
-          title: el.innerText,
-          series: hasColon(el.innerText) ? el.innerText.split(":")[0] : null,
-        };
-      })
+    const titleElements = await page.$$eval(cinema.titleFieldEl, (els) =>
+      els.map((el) => el.textContent.trim())
     );
 
-    return movieData.map((movie) => ({
-      title: movie.title,
-      series: movie.series,
-      cinema: cinema.name,
-      date,
-    }));
+    return processMoviesData(titleElements, cinema, date);
   } catch (error) {
     console.error("Error during crawling:", error);
     throw error;
@@ -55,49 +41,24 @@ exports.crawlCinemas = async (req, res, next) => {
       const url = returnUrlForCurrentProgramme(cinema.urlString);
       const data = await evaluateMoviesFromCinemaPage(page, url, cinema, null);
       movieTitles.push(data);
-
-      if (!checkIfUrlHasDate(cinema.urlString)) {
-        console.log("Cinema has no date in URL. Skipping crawl per date...");
-        continue;
-      }
-
-      for (const date of nextSevenDays) {
-        console.log("crawl cinema:", cinema.name, "for date:", date);
-        const urlWithDate = returnUrlForCurrentProgramme(
-          cinema.urlString,
-          date
-        );
-        const newMovietitles = await evaluateMoviesFromCinemaPage(
-          page,
-          urlWithDate,
-          cinema,
-          date
-        );
-        console.log("newMovietitles:", newMovietitles);
-        movieTitles.push(newMovietitles);
-      }
     }
+    const flatArrayofMovies = movieTitles.flat();
 
-    const filteredMovieTitles = filterAndCleanMovieTitles(movieTitles);
-
-    for (const movie of filteredMovieTitles) {
+    for (const movie of flatArrayofMovies) {
       const newMovie = new Movie({
         title: movie.title,
         cinemas: movie.cinema,
         date: movie.date,
-        url: returnUrlForCurrentProgramme(
-          listOfCinemas.find((c) => c.name === movie.cinema).urlString,
-          movie.date
-        ),
+        url: movie.urlString,
       });
 
+      console.log("Saving movie to database:", movie, newMovie);
       const result = await newMovie.save();
-      console.log("Saved movie to database:", result);
     }
 
     await browser.close();
     console.log("crawling finished");
-    res.status(200).json({ movieTitles: filteredMovieTitles });
+    res.status(200).json({ movieTitles: movieTitles });
   } catch (error) {
     console.error("Error during crawling:", error);
     res.status(500).json({ error: "Internal Server Error" });

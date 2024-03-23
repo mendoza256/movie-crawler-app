@@ -7,6 +7,7 @@ const cookieParser = require("cookie-parser");
 const crawlerRoutes = require("./routes/crawler");
 const authRoutes = require("./routes/auth");
 const movieRoutes = require("./routes/movies");
+const databaseRoutes = require("./routes/database");
 require("dotenv").config();
 
 const mongodbUri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.5uqboef.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
