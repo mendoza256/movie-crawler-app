@@ -52,8 +52,8 @@ exports.crawlCinemas = async (req, res, next) => {
         url: movie.urlString,
       });
 
-      console.log("Saving movie to database:", movie, newMovie);
-      const result = await newMovie.save();
+      console.log("Saving movie to database:", newMovie);
+      await newMovie.save();
     }
 
     await browser.close();
