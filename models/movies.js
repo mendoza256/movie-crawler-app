@@ -5,11 +5,19 @@ const movie = new mongoose.Schema({
     type: String,
     required: true,
   },
-  cinemas: {
+  dateText: {
+    type: String,
+    required: false,
+  },
+  movieUrl: {
     type: String,
     required: true,
   },
-  url: {
+  cinemaName: {
+    type: String,
+    required: true,
+  },
+  cinemaUrl: {
     type: String,
     required: true,
   },
