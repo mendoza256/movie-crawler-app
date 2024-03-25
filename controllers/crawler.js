@@ -12,12 +12,14 @@ const Movie = require("../models/movies.js");
 async function evaluateMoviesFromCinemaPage(page, url, cinema) {
   try {
     await page.goto(url);
-    await page.waitForSelector(".btn.outline.pull-right");
-    await page.click(".btn.outline.pull-right");
+    if (cinema.cookiePopup) {
+      await page.waitForSelector(cinema.cookiePopup.buttonClass);
+      await page.click(cinema.cookiePopup.buttonClass);
+    }
     await autoScroll(page);
     await page.waitForSelector(cinema.parentEl);
     await page.waitForSelector(cinema.titleFieldEl);
-    await autoScroll(page, ".page-start");
+    await autoScroll(page);
     const movieResults = await page.evaluate((cinema) => {
       const movieElements = document.querySelectorAll(cinema.parentEl);
 
@@ -42,8 +44,6 @@ async function evaluateMoviesFromCinemaPage(page, url, cinema) {
       return results;
     }, cinema);
 
-    console.log(movieResults);
-
     return processMoviesData(movieResults);
   } catch (error) {
     console.error("Error during crawling:", error);
@@ -55,10 +55,11 @@ exports.crawlCinemas = async (req, res, next) => {
   console.log("start crawling...");
   try {
     const browser = await puppeteer.launch({
-      // headless: "new",
-      headless: false,
-      slowMo: 150,
       args: ["--disable-features=site-per-process"],
+      // toggle headless mode to debug
+      headless: false,
+      // headless: "new",
+      slowMo: 50,
     });
     const page = await browser.newPage();
     await page.setViewport({
@@ -77,7 +78,6 @@ exports.crawlCinemas = async (req, res, next) => {
     const flatArrayofMovies = movieTitles.flat();
 
     for (const movie of flatArrayofMovies) {
-      console.log(movie);
       const newMovie = new Movie({
         title: movie.title,
         dateText: movie.dateText,
