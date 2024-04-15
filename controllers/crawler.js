@@ -1,9 +1,7 @@
 const puppeteer = require("puppeteer");
 const {
-  nextSevenDays,
   returnUrlForCurrentProgramme,
   processMoviesData,
-  isRealMovieTitle,
   autoScroll,
 } = require("../lib/utils.js");
 const { listOfCinemas } = require("../lib/hardcodedData.js");
@@ -95,6 +93,42 @@ exports.crawlCinemas = async (req, res, next) => {
     res.status(200).json({ movieTitles: movieTitles });
   } catch (error) {
     console.error("Error during crawling:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+async function updateMovieWithTMDB(movie) {
+  const tmdbId = returnQueryString(movie.title);
+
+  const tmdbUrl = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.TMDB_API_KEY}&query=${tmdbId}`;
+  const response = await fetch(tmdbUrl);
+  const data = await response.json();
+  const tmdbMovie = data.results[0];
+  if (tmdbMovie) {
+    return tmdbMovie;
+  } else {
+    console.error("Movie not found in TMDB:", movie.title);
+  }
+}
+
+exports.addMetadata = async (req, res, next) => {
+  try {
+    const allDbMoviesWithoutId = await Movie.find(
+      Movie.find({ id: { $exists: false } }, (err, docs) => {
+        if (err) {
+          console.log(err);
+        }
+        return docs;
+      })
+    );
+
+    for (const movie of allDbMoviesWithoutId) {
+      const updatedMovie = await updateMovieWithTMDB(movie);
+      const newMovie = new Movie(updatedMovie);
+      await Movie.updateOne({ id: newMovie.id }, newMovie);
+    }
+  } catch (error) {
+    console.error("Error movie update:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };

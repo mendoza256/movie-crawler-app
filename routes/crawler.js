@@ -11,4 +11,6 @@ router.get(
   crawlerController.crawlCinemas
 );
 
+router.get("/add-metadata", crawlerController.addMetadata);
+
 module.exports = router;
