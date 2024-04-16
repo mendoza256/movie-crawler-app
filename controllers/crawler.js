@@ -7,6 +7,7 @@ const {
 const { listOfCinemas } = require("../lib/hardcodedData.js");
 const Movie = require("../models/movies.js");
 const { returnQueryString } = require("../lib/utils.js");
+require("dotenv").config();
 
 async function evaluateMoviesFromCinemaPage(page, url, cinema) {
   try {
@@ -100,19 +101,17 @@ exports.crawlCinemas = async (req, res, next) => {
 
 async function getTMDBMetadata(movie) {
   const tmdbTitle = returnQueryString(movie.title);
-  console.log("tmdbTitle", tmdbTitle);
+  if (!movie.title) {
+    return movie;
+  }
 
-  const tmdbUrl = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.TMDB_API_KEY}&query=${tmdbTitle}`;
+  const tmdbUrl = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.TMDB_API_KEY_AUTH}&query=${tmdbTitle}`;
   try {
     const response = await fetch(tmdbUrl);
     const data = await response.json();
-    const tmdbMovie = data.results[0];
+    const tmdbMovie = data.results?.[0];
     if (tmdbMovie) {
-      // tmdbData: movie,
-      //     id: movie.id,
-      //     title: movie.title,
       return {
-        ...movie,
         tmdbData: tmdbMovie,
         id: tmdbMovie.id,
         title: tmdbMovie.title,
@@ -129,24 +128,28 @@ exports.addMetadata = async (req, res, next) => {
   try {
     const allDbMoviesWithoutId = await Movie.find({ id: { $exists: false } });
 
-    for (const movie of allDbMoviesWithoutId) {
-      // timeout set to avoid rate limiting
+    for (const [index, movie] of allDbMoviesWithoutId.entries()) {
+      // if (index > 10) {
+      //   break;
+      // }
+
       setTimeout(async () => {
-        const updatedMovie = await getTMDBMetadata(movie);
-        const newMovie = new Movie(updatedMovie);
+        const tmdbMovie = await getTMDBMetadata(movie);
+
+        if (!tmdbMovie) {
+          return;
+        }
+
+        movie.id = tmdbMovie.id;
+        movie.title = tmdbMovie.title;
+        movie.tmdbData = tmdbMovie.tmdbData;
+
         try {
-          await Movie.updateOne({ _id: movie._id }, newMovie);
+          await movie.save();
         } catch (error) {
           console.error("Error updating movie:", error);
         }
-      }, 500);
-      // const updatedMovie = await getTMDBMetadata(movie);
-      // const newMovie = new Movie(updatedMovie);
-      // try {
-      //   await Movie.updateOne({ _id: movie._id }, newMovie);
-      // } catch (error) {
-      //   console.error("Error updating movie:", error);
-      // }
+      }, 500 * index);
     }
   } catch (error) {
     console.error("Error movie update:", error);
