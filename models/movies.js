@@ -11,19 +11,24 @@ const movie = new mongoose.Schema({
   },
   movieUrl: {
     type: String,
-    required: true,
   },
   cinemaName: {
     type: String,
-    required: true,
   },
   cinemaUrl: {
     type: String,
-    required: true,
   },
   created_at: {
     type: Date,
     default: Date.now,
+  },
+  tmdbData: {
+    type: Object,
+    default: null,
+  },
+  id: {
+    type: Number,
+    default: null,
   },
 });
 
