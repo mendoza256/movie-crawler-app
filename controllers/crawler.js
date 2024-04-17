@@ -57,9 +57,9 @@ exports.crawlCinemas = async (req, res, next) => {
     const browser = await puppeteer.launch({
       args: ["--disable-features=site-per-process"],
       // toggle headless mode to debug
-      headless: false,
-      // headless: "new",
-      slowMo: 50,
+      // headless: false,
+      headless: "new",
+      // slowMo: 50,
     });
     const page = await browser.newPage();
     await page.setViewport({
@@ -78,6 +78,13 @@ exports.crawlCinemas = async (req, res, next) => {
     const flatArrayofMovies = movieTitles.flat();
 
     for (const movie of flatArrayofMovies) {
+      const existingMovie = await Movie.findOne({ title: movie.title });
+
+      if (existingMovie) {
+        console.log("Movie already exists in database:", movie.title);
+        continue;
+      }
+
       const newMovie = new Movie({
         title: movie.title,
         dateText: movie.dateText,
@@ -116,6 +123,21 @@ async function getTMDBMetadata(movie) {
         id: tmdbMovie.id,
         title: tmdbMovie.title,
       };
+    } else if (movie.title) {
+      const titleParts = movie.title.split(/[^a-zA-Z0-9 ]/);
+      for (const part of titleParts) {
+        const tmdbUrl = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.TMDB_API_KEY_AUTH}&query=${part}`;
+        const response = await fetch(tmdbUrl);
+        const data = await response.json();
+        const tmdbMovie = data.results?.[0];
+        if (tmdbMovie) {
+          return {
+            tmdbData: tmdbMovie,
+            id: tmdbMovie.id,
+            title: tmdbMovie.title,
+          };
+        }
+      }
     } else {
       console.error("Movie not found in TMDB:", movie.title);
     }
@@ -129,10 +151,6 @@ exports.addMetadata = async (req, res, next) => {
     const allDbMoviesWithoutId = await Movie.find({ id: { $exists: false } });
 
     for (const [index, movie] of allDbMoviesWithoutId.entries()) {
-      // if (index > 10) {
-      //   break;
-      // }
-
       setTimeout(async () => {
         const tmdbMovie = await getTMDBMetadata(movie);
 
@@ -151,6 +169,7 @@ exports.addMetadata = async (req, res, next) => {
         }
       }, 500 * index);
     }
+    res.status(200).json({ message: "Metadata added successfully" });
   } catch (error) {
     console.error("Error movie update:", error);
     res.status(500).json({ error: "Internal Server Error" });
